@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>YQN Studio 班表</title>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei",sans-serif;
+  background:#f5f0eb;color:#3a2e28;min-height:100vh;
+  display:flex;justify-content:center;padding:1.5rem 0 4rem;
+}
+.wrap{width:100%;max-width:460px;padding:0 1rem;}
+
+/* Header */
+.header{text-align:center;margin-bottom:1.25rem;padding-top:0.5rem;}
+.store-name{font-size:30px;font-family:'Dancing Script',cursive;font-weight:600;color:#3a2e28;}
+.store-sub{font-size:12px;color:#b0a090;margin-top:3px;}
+
+/* Nav */
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+.nav-btn{background:#efe8e0;border:none;border-radius:8px;padding:8px 18px;font-size:14px;cursor:pointer;color:#3a2e28;transition:background .15s;}
+.nav-btn:hover{background:#e0d4c8;}
+.month-label{font-size:15px;font-weight:500;color:#3a2e28;}
+
+/* Calendar */
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:3px;}
+.wd{text-align:center;font-size:10px;color:#b0a090;padding:3px 0;font-weight:600;letter-spacing:.04em;}
+.wd.sun{color:#c9614a;}.wd.sat{color:#7a9ab8;}
+
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:1rem;}
+
+.day{
+  border-radius:6px;min-height:44px;padding:4px 3px 3px;
+  display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;border:0.5px solid #e4ddd6;background:#f0ebe4;
+  transition:background .12s;position:relative;overflow:hidden;
+}
+.day.empty{cursor:default;pointer-events:none;background:transparent;border-color:transparent;}
+.day:active{background:#e4dcd2;}
+.day.off{background:#ede8e2;border-color:#e0dad2;}
+.day.today .dn{
+  background:#7a5c40;color:#fff !important;
+  border-radius:50%;width:20px;height:20px;
+  display:flex;align-items:center;justify-content:center;line-height:1;
+}
+.dn{font-size:12px;font-weight:600;color:#5a3e28;text-align:center;line-height:20px;min-width:20px;}
+.day.off .dn{color:#c0b4a8;}
+.sun-num .dn{color:#c9614a !important;}
+.day.off.sun-num .dn{color:#ddb8b0 !important;}
+
+/* slot pills inside day cell */
+.day-slots{display:flex;flex-direction:column;gap:1px;margin-top:2px;width:100%;}
+.ds{font-size:9px;text-align:center;color:#7a5c40;line-height:1.3;width:100%;}
+.ds.booked{color:#c9614a;text-decoration:line-through;font-weight:600;}
+.ds.hidden{display:none;}
+.full-label{font-size:9px;font-weight:700;color:#c9614a;text-align:center;margin-top:1px;}
+
+/* Day detail panel */
+.panel{
+  background:#fff;border:0.5px solid #ddd6ce;border-radius:14px;
+  padding:1rem 1.1rem;margin-bottom:1rem;display:none;
+}
+.panel.show{display:block;}
+.panel-title{font-size:15px;font-weight:600;color:#3a2e28;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.panel-title .close-btn{font-size:18px;color:#c8beb4;cursor:pointer;line-height:1;padding:0 4px;}
+
+/* Off toggle */
+.off-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #f0ebe4;margin-bottom:10px;}
+.off-row label{font-size:13px;color:#3a2e28;}
+.toggle-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:#9a8878;}
+.tog{width:36px;height:20px;border-radius:10px;background:#ddd;position:relative;cursor:pointer;border:none;transition:background .2s;flex-shrink:0;}
+.tog.on{background:#c9614a;}
+.tog::after{content:'';position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:3px;left:3px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.tog.on::after{left:19px;}
+
+/* Slots list */
+.slots-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.slots-head-label{font-size:12px;font-weight:600;color:#9a8878;text-transform:uppercase;letter-spacing:.05em;}
+.add-slot-btn{font-size:12px;color:#7a5c40;background:#f0ebe4;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;}
+.add-slot-btn:hover{background:#e8ddd4;}
+
+.slot-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:0.5px solid #f5f0eb;}
+.slot-row:last-child{border-bottom:none;}
+.slot-time{font-size:14px;font-weight:500;color:#3a2e28;flex:1;}
+.slot-time.booked{color:#c9614a;text-decoration:line-through;}
+.slot-actions{display:flex;align-items:center;gap:6px;}
+.book-btn{font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid;cursor:pointer;transition:all .15s;font-weight:500;}
+.book-btn.unbooked{background:#f5f0eb;border-color:#d4c4b4;color:#7a5c40;}
+.book-btn.unbooked:hover{background:#e8ddd4;}
+.book-btn.booked{background:#fdf0ee;border-color:#e8b4ae;color:#c9614a;}
+.del-btn{font-size:14px;color:#ccc;background:none;border:none;cursor:pointer;padding:0 2px;line-height:1;}
+.del-btn:hover{color:#c9614a;}
+
+.no-slots{font-size:13px;color:#c8beb4;text-align:center;padding:12px 0;}
+
+/* Action bar */
+.action-bar{display:flex;gap:8px;flex-direction:column;margin-bottom:1rem;}
+.save-btn{width:100%;padding:13px;background:#3a2e28;color:#f5f0eb;border:none;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;}
+.save-btn:hover{background:#5a4838;}
+.export-btn{width:100%;padding:12px;background:#f5f0eb;color:#3a2e28;border:0.5px solid #c8beb4;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.export-btn:hover{background:#ede8e2;}
+.action-msg{font-size:12px;color:#7a5c40;text-align:center;min-height:18px;}
+.hint{font-size:11px;color:#c8beb4;text-align:center;margin-bottom:.5rem;}
+
+/* Preview overlay */
+#previewOverlay{position:fixed;inset:0;background:rgba(58,46,40,.88);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:998;padding:20px;}
+#previewOverlay p{color:#f5f0eb;font-size:14px;margin-bottom:12px;text-align:center;line-height:1.8;}
+#previewImg{width:100%;max-width:420px;border-radius:10px;display:block;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+#previewOverlay button{margin-top:16px;padding:11px 32px;background:#f5f0eb;color:#3a2e28;border:none;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="store-name">YQN Studio</div>
+    <div class="store-sub">點選日期管理時段</div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn" onclick="changeMonth(-1)">‹ 上月</button>
+    <span class="month-label" id="monthLabel"></span>
+    <button class="nav-btn" onclick="changeMonth(1)">下月 ›</button>
+  </div>
+
+  <div class="weekdays">
+    <div class="wd sun">SUN</div><div class="wd">MON</div><div class="wd">TUE</div>
+    <div class="wd">WED</div><div class="wd">THU</div><div class="wd">FRI</div>
+    <div class="wd sat">SAT</div>
+  </div>
+  <div class="cal" id="cal"></div>
+
+  <!-- Day edit panel -->
+  <div class="panel" id="panel">
+    <div class="panel-title">
+      <span id="panelTitle">日期</span>
+      <span class="close-btn" onclick="closePanel()">×</span>
+    </div>
+
+    <!-- Off toggle -->
+    <div class="off-row">
+      <label>標記為休假</label>
+      <div class="toggle-wrap">
+        <span id="offLabel">營業</span>
+        <button class="tog" id="offTog" onclick="toggleOff()"></button>
+      </div>
+    </div>
+
+    <!-- Slots -->
+    <div id="slotsArea">
+      <div class="slots-head">
+        <span class="slots-head-label">時段</span>
+      </div>
+      <div id="slotsList"></div>
+    </div>
+  </div>
+
+  <p class="hint">點選日期設定時段 · 點時段旁按鈕標記已預約</p>
+
+  <div class="action-bar">
+    <button class="save-btn" onclick="saveData()">💾 儲存班表</button>
+    <button class="export-btn" onclick="exportJPG()">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1v9M5 7l3 3 3-3M2 11v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      產生班表圖片 4:5
+    </button>
+    <div class="action-msg" id="actionMsg"></div>
+  </div>
+</div>
+
+<div id="previewOverlay">
+  <p>📱 長按圖片 → <strong>「加入照片」</strong><br>即可存到相簿</p>
+  <img id="previewImg"/>
+  <button onclick="document.getElementById('previewOverlay').style.display='none'">關閉</button>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────
+const MONTHS_ZH = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const MONTHS_EN = ['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+const MONTHS_EN_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const SLOT_LABELS = {'10:00':'10:00 – 12:00','14:00':'14:00 – 16:00','18:00':'18:00 – 20:00'};
+const WD_ZH = ['日','一','二','三','四','五','六'];
+const WD_SHORT = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const DEFAULT_SLOTS = ['10:00','14:00','18:00'];
+
+// ── State ────────────────────────────────────────────────
+const now = new Date();
+let curYear  = now.getFullYear();
+let curMonth = now.getMonth();
+let activeKey = null; // currently open panel
+
+/*
+  data[key] = {
+    off: bool,
+    slots: [ { time: '18:00', booked: bool }, ... ]
+  }
+  If key not present → default slots, not off
+*/
+let data = {};
+try{ const s=localStorage.getItem('yqn_v6'); if(s) data=JSON.parse(s); }catch(e){}
+
+// ── Helpers ──────────────────────────────────────────────
+function getDay(key){
+  if(!data[key]) data[key] = { off:false, slots: DEFAULT_SLOTS.map(t=>({time:t,booked:false})) };
+  return data[key];
+}
+function isFullyBooked(key){
+  const d = data[key];
+  if(!d || d.off || !d.slots || d.slots.length===0) return false;
+  return d.slots.every(s=>s.booked);
+}
+
+
+// ── Calendar ─────────────────────────────────────────────
+function renderCal(){
+  document.getElementById('monthLabel').textContent = `${curYear} 年 ${MONTHS_ZH[curMonth]}`;
+  const cal = document.getElementById('cal');
+  cal.innerHTML = '';
+  const first = new Date(curYear,curMonth,1).getDay();
+  const total = new Date(curYear,curMonth+1,0).getDate();
+  const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+  for(let i=0;i<first;i++){
+    const e=document.createElement('div'); e.className='day empty'; cal.appendChild(e);
+  }
+
+  for(let d=1;d<=total;d++){
+    const dow = new Date(curYear,curMonth,d).getDay();
+    const key = `${curYear}-${curMonth}-${d}`;
+    const dayData = data[key];
+    const isOff = dayData?.off;
+    const slots = dayData?.slots || DEFAULT_SLOTS.map(t=>({time:t,booked:false}));
+    const full  = isFullyBooked(key) || (dayData && !isOff && slots.length>0 && slots.every(s=>s.booked));
+    const isToday = key===todayKey;
+    const isActive = key===activeKey;
+
+    const el = document.createElement('div');
+    let cls = 'day' + (isOff?' off':'') + (isToday?' today':'') + (dow===0?' sun-num':'') + (isActive?' selected':'');
+    el.className = cls;
+    if(isActive){ el.style.outline='2px solid #7a5c40'; el.style.outlineOffset='-1px'; }
+
+    // day number
+    let html = `<span class="dn">${d}</span>`;
+
+    if(!isOff){
+      if(full){
+        html += `<div class="full-label">已額滿</div>`;
+      } else {
+        html += '<div class="day-slots">';
+        slots.forEach(s=>{
+          html += `<div class="ds${s.booked?' booked':''}">${s.time}</div>`;
+        });
+        html += '</div>';
+      }
+    }
+
+    el.innerHTML = html;
+    el.onclick = () => openPanel(d, dow, key);
+    cal.appendChild(el);
+  }
+}
+
+function changeMonth(d){
+  curMonth+=d;
+  if(curMonth>11){curMonth=0;curYear++;}
+  if(curMonth<0){curMonth=11;curYear--;}
+  activeKey=null;
+  closePanel();
+  renderCal();
+}
+
+// ── Panel ────────────────────────────────────────────────
+function openPanel(d, dow, key){
+  activeKey = key;
+  renderCal();
+  const day = getDay(key);
+
+  document.getElementById('panelTitle').textContent =
+    `${curYear}/${curMonth+1}/${d}（${WD_ZH[dow]}）`;
+
+  // off toggle
+  const tog = document.getElementById('offTog');
+  tog.className = 'tog' + (day.off?' on':'');
+  document.getElementById('offLabel').textContent = day.off ? '休假' : '營業';
+
+  // slots area visibility
+  document.getElementById('slotsArea').style.opacity = day.off ? '0.35' : '1';
+  document.getElementById('slotsArea').style.pointerEvents = day.off ? 'none' : '';
+
+  renderSlots(key);
+
+  const panel = document.getElementById('panel');
+  panel.classList.add('show');
+  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function closePanel(){
+  document.getElementById('panel').classList.remove('show');
+  activeKey = null;
+  renderCal();
+}
+
+function toggleOff(){
+  if(!activeKey) return;
+  const day = getDay(activeKey);
+  day.off = !day.off;
+  const tog = document.getElementById('offTog');
+  tog.className = 'tog' + (day.off?' on':'');
+  document.getElementById('offLabel').textContent = day.off ? '休假' : '營業';
+  document.getElementById('slotsArea').style.opacity = day.off ? '0.35' : '1';
+  document.getElementById('slotsArea').style.pointerEvents = day.off ? 'none' : '';
+  renderCal();
+}
+
+function renderSlots(key){
+  const day = getDay(key);
+  const list = document.getElementById('slotsList');
+  list.innerHTML = '';
+
+  if(day.slots.length===0){
+    day.slots = DEFAULT_SLOTS.map(t=>({time:t,booked:false}));
+  }
+
+  day.slots.forEach((s,i)=>{
+    const label = SLOT_LABELS[s.time] || s.time;
+    const row = document.createElement('div');
+    row.className = 'slot-row';
+    row.innerHTML = `
+      <span class="slot-time${s.booked?' booked':''}">${label}</span>
+      <div class="slot-actions">
+        <button class="book-btn ${s.booked?'booked':'unbooked'}" onclick="toggleBooked('${key}',${i})">
+          ${s.booked?'取消預約':'標記已預約'}
+        </button>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+function toggleBooked(key,i){
+  const day = getDay(key);
+  day.slots[i].booked = !day.slots[i].booked;
+  renderSlots(key);
+  renderCal();
+}
+
+
+
+// ── Save ─────────────────────────────────────────────────
+function saveData(){
+  try{
+    localStorage.setItem('yqn_v6', JSON.stringify(data));
+    showMsg('✓ 班表已儲存！');
+  }catch(e){ showMsg('儲存失敗'); }
+}
+
+function showMsg(t){
+  const el=document.getElementById('actionMsg');
+  el.textContent=t;
+  setTimeout(()=>el.textContent='',3000);
+}
+
+// ── Export 4:5 JPG ────────────────────────────────────────
+async function exportJPG(){
+  await document.fonts.load(`600 66px 'Dancing Script'`);
+
+  const DPR=2, W=1080, H=1350;
+  const PAD_X=52, PAD_Y=64;
+  const HEADER_H=230, DIVIDER_Y=PAD_Y+HEADER_H;
+  const WD_BAR_H=52, WD_Y0=DIVIDER_Y+2;
+  const CAL_Y0=WD_Y0+WD_BAR_H;
+  const CAL_H=H-CAL_Y0-PAD_Y-44;
+
+  const first=new Date(curYear,curMonth,1).getDay();
+  const total=new Date(curYear,curMonth+1,0).getDate();
+  const rows=Math.ceil((first+total)/7);
+
+  const GRID_W=W-PAD_X*2, COL_GAP=3, ROW_GAP=3;
+  const CELL_W=Math.floor((GRID_W-COL_GAP*6)/7);
+  const CELL_H=Math.floor((CAL_H-ROW_GAP*(rows-1))/rows);
+
+  const canvas=document.createElement('canvas');
+  canvas.width=W*DPR; canvas.height=H*DPR;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(DPR,DPR);
+
+  // background
+  ctx.fillStyle='#F2EBE3'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#EDE4DA'; ctx.fillRect(0,0,W,DIVIDER_Y);
+
+  // YQN Studio
+  ctx.textAlign='center';
+  ctx.fillStyle='#7a5c40';
+  ctx.font=`600 66px 'Dancing Script',Georgia,cursive`;
+  ctx.fillText('YQN Studio',W/2,PAD_Y+60);
+
+  // month
+  ctx.textAlign='left';
+  ctx.fillStyle='#3a2e28';
+  ctx.font=`300 125px Georgia,serif`;
+  ctx.fillText(MONTHS_EN[curMonth],PAD_X-4,PAD_Y+196);
+
+  // year
+  ctx.textAlign='right';
+  ctx.fillStyle='#3a2e28';
+  ctx.font=`300 88px Georgia,serif`;
+  ctx.fillText(String(curYear),W-PAD_X,PAD_Y+196);
+
+  // divider
+  ctx.strokeStyle='#c8beb4'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(PAD_X,DIVIDER_Y); ctx.lineTo(W-PAD_X,DIVIDER_Y); ctx.stroke();
+
+  // weekday labels
+  for(let i=0;i<7;i++){
+    const cx=PAD_X+i*(CELL_W+COL_GAP);
+    ctx.textAlign='center';
+    ctx.fillStyle=i===0?'#c9614a':i===6?'#7a9ab8':'#9a8878';
+    ctx.font=`500 19px -apple-system,sans-serif`;
+    ctx.fillText(WD_ZH[i],cx+CELL_W/2,WD_Y0+36);
+  }
+
+  // cells
+  for(let d=1;d<=total;d++){
+    const idx=first+d-1, col=idx%7, row=Math.floor(idx/7);
+    const dow=new Date(curYear,curMonth,d).getDay();
+    const key=`${curYear}-${curMonth}-${d}`;
+    const dayData=data[key];
+    const isOff=dayData?.off||false;
+    const slots=dayData?.slots||(isOff?[]:DEFAULT_SLOTS.map(t=>({time:t,booked:false})));
+    const allBooked=!isOff&&slots.length>0&&slots.every(s=>s.booked);
+
+    const cx=PAD_X+col*(CELL_W+COL_GAP);
+    const cy=CAL_Y0+row*(CELL_H+ROW_GAP);
+
+    // cell bg
+    ctx.fillStyle=isOff?'#EDE8E2':'#F5F0EB';
+    ctx.fillRect(cx,cy,CELL_W,CELL_H);
+    ctx.strokeStyle=isOff?'#DDD8D0':'#E4DDD6';
+    ctx.lineWidth=0.5;
+    ctx.strokeRect(cx+.25,cy+.25,CELL_W-.5,CELL_H-.5);
+
+    // day number top-left
+    ctx.textAlign='left';
+    ctx.fillStyle=isOff?(dow===0?'#e4b0a4':'#c0b8b0'):(dow===0?'#c9614a':'#5a3e28');
+    ctx.font=`${isOff?300:500} 26px Georgia,serif`;
+    ctx.fillText(d,cx+10,cy+30);
+
+    if(isOff){
+      // X lines
+      ctx.save();
+      ctx.strokeStyle='#c9614a'; ctx.lineWidth=Math.max(2,CELL_W*.022);
+      ctx.globalAlpha=0.32; ctx.lineCap='round';
+      const m=Math.min(CELL_W,CELL_H)*.16;
+      ctx.beginPath(); ctx.moveTo(cx+m,cy+m); ctx.lineTo(cx+CELL_W-m,cy+CELL_H-m); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx+CELL_W-m,cy+m); ctx.lineTo(cx+m,cy+CELL_H-m); ctx.stroke();
+      ctx.restore();
+    } else if(allBooked){
+      // 已額滿
+      ctx.textAlign='center';
+      ctx.fillStyle='#c9614a';
+      ctx.font=`700 ${Math.min(18,CELL_W*0.17)}px -apple-system,PingFang TC,sans-serif`;
+      ctx.fillText('已額滿',cx+CELL_W/2,cy+CELL_H/2+6);
+    } else {
+      // slots list
+      const lineH=Math.min(18,(CELL_H-36)/Math.max(slots.length,1));
+      const fontSize=Math.min(14,lineH*0.78);
+      const startY=cy+38;
+      slots.forEach((s,si)=>{
+        const label = SLOT_LABELS[s.time] || s.time;
+        const ty=startY+si*lineH+fontSize;
+        if(ty>cy+CELL_H-4) return;
+
+        ctx.textAlign='left';
+        if(s.booked){
+          // strikethrough
+          ctx.fillStyle='#c9614a';
+          ctx.font=`600 ${fontSize}px -apple-system,PingFang TC,sans-serif`;
+          ctx.fillText(label,cx+8,ty);
+          // draw strikethrough line
+          const tw=ctx.measureText(label).width;
+          ctx.save();
+          ctx.strokeStyle='#c9614a'; ctx.lineWidth=1.5;
+          ctx.beginPath(); ctx.moveTo(cx+8,ty-fontSize*0.35); ctx.lineTo(cx+8+tw,ty-fontSize*0.35); ctx.stroke();
+          ctx.restore();
+        } else {
+          ctx.fillStyle='#7a6050';
+          ctx.font=`400 ${fontSize}px -apple-system,PingFang TC,sans-serif`;
+          ctx.fillText(label,cx+8,ty);
+        }
+      });
+    }
+  }
+
+  // footer
+  ctx.textAlign='center';
+  ctx.fillStyle='#9a8878';
+  ctx.font=`600 30px 'Dancing Script',Georgia,cursive`;
+  ctx.fillText('YQN Studio',W/2,H-28);
+
+  document.getElementById('previewImg').src=canvas.toDataURL('image/jpeg',0.95);
+  document.getElementById('previewOverlay').style.display='flex';
+}
+
+// ── Init ──────────────────────────────────────────────────
+window.onload = () => renderCal();
+</script>
+</body>
+</html>
