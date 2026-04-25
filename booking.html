@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>YQN Studio 線上預約</title>
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Noto+Serif+TC:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f7f3ee;
+  --bg2:#f0ebe3;
+  --card:#fff;
+  --brown:#3a2e28;
+  --brown2:#7a5c40;
+  --brown3:#c8beb4;
+  --red:#c9614a;
+  --green:#5a8a5a;
+  --border:#e4ddd6;
+  --font:'Noto Serif TC',Georgia,serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--brown);min-height:100vh;}
+
+/* ── Page switcher ── */
+.page{display:none;}
+.page.active{display:block;}
+
+/* ── Shared header ── */
+.top-bar{
+  background:var(--bg2);
+  padding:20px 20px 16px;
+  text-align:center;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:10;
+}
+.brand{font-family:'Dancing Script',cursive;font-size:26px;color:var(--brown2);font-weight:600;}
+.page-title{font-size:12px;color:var(--brown3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;}
+
+/* ── Step indicator ── */
+.steps{display:flex;align-items:center;justify-content:center;gap:0;padding:16px 20px 0;margin-bottom:4px;}
+.step{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0;transition:all .3s;}
+.step.done{background:var(--brown);color:#fff;}
+.step.active{background:var(--brown2);color:#fff;box-shadow:0 0 0 3px rgba(122,92,64,.2);}
+.step.pending{background:var(--border);color:var(--brown3);}
+.step-line{flex:1;height:1px;background:var(--border);max-width:24px;}
+.step-line.done{background:var(--brown);}
+
+/* ── Form pages ── */
+.form-body{padding:20px;}
+.section-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--brown3);margin-bottom:16px;font-weight:500;}
+
+.field{margin-bottom:18px;}
+.field label{font-size:13px;color:var(--brown);display:block;margin-bottom:6px;font-weight:500;}
+.field label span.req{color:var(--red);margin-left:2px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:11px 14px;
+  border:1px solid var(--border);border-radius:10px;
+  font-size:15px;color:var(--brown);background:var(--card);
+  font-family:var(--font);outline:none;transition:border .2s;
+  -webkit-appearance:none;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brown2);}
+.field textarea{height:80px;resize:none;}
+
+/* gender / radio group */
+.radio-group{display:flex;gap:10px;}
+.radio-item{flex:1;}
+.radio-item input[type=radio]{display:none;}
+.radio-item label{
+  display:flex;align-items:center;justify-content:center;
+  padding:11px;border:1px solid var(--border);border-radius:10px;
+  font-size:14px;cursor:pointer;transition:all .2s;color:var(--brown3);
+}
+.radio-item input[type=radio]:checked + label{
+  border-color:var(--brown2);background:#f5ede4;color:var(--brown);font-weight:500;
+}
+
+/* service cards */
+.service-cards{display:flex;flex-direction:column;gap:10px;}
+.service-card{
+  border:1px solid var(--border);border-radius:12px;padding:14px 16px;
+  cursor:pointer;transition:all .2s;position:relative;
+}
+.service-card:active{background:#f5ede4;}
+.service-card.selected{border-color:var(--brown2);background:#faf5ef;}
+.service-card input[type=radio]{display:none;}
+.sc-name{font-size:15px;font-weight:500;color:var(--brown);}
+.sc-desc{font-size:12px;color:var(--brown3);margin-top:3px;}
+.sc-check{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.service-card.selected .sc-check{background:var(--brown2);border-color:var(--brown2);}
+.sc-check::after{content:'✓';font-size:11px;color:#fff;display:none;}
+.service-card.selected .sc-check::after{display:block;}
+
+/* brow experience */
+.yn-group{display:flex;gap:10px;}
+.yn-item{flex:1;}
+.yn-item input[type=radio]{display:none;}
+.yn-item label{
+  display:flex;align-items:center;justify-content:center;
+  padding:11px;border:1px solid var(--border);border-radius:10px;
+  font-size:14px;cursor:pointer;transition:all .2s;color:var(--brown3);
+}
+.yn-item input[type=radio]:checked + label{
+  border-color:var(--brown2);background:#f5ede4;color:var(--brown);font-weight:500;
+}
+
+/* photo upload */
+.upload-area{
+  border:1.5px dashed var(--border);border-radius:12px;
+  padding:24px;text-align:center;cursor:pointer;transition:all .2s;
+  position:relative;overflow:hidden;
+}
+.upload-area:active{background:#f5ede4;}
+.upload-area.has-file{border-color:var(--brown2);background:#faf5ef;}
+.upload-icon{font-size:28px;margin-bottom:8px;}
+.upload-text{font-size:13px;color:var(--brown2);font-weight:500;}
+.upload-hint{font-size:11px;color:var(--brown3);margin-top:4px;}
+.upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+#photoPreview{width:100%;border-radius:8px;margin-top:10px;display:none;max-height:200px;object-fit:cover;}
+
+/* notice box */
+.notice{background:#fdf5ef;border:1px solid #e8d4c0;border-radius:10px;padding:12px 14px;margin-bottom:18px;}
+.notice p{font-size:12px;color:#8a5a3a;line-height:1.7;}
+.notice strong{color:var(--red);}
+
+/* ── Calendar page ── */
+.cal-header{padding:16px 20px 8px;}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.cal-nav-btn{background:var(--bg2);border:none;border-radius:8px;padding:7px 16px;font-size:14px;cursor:pointer;color:var(--brown);font-family:var(--font);}
+.cal-month{font-size:15px;font-weight:500;}
+.cal-grid-head{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 20px;margin-bottom:3px;}
+.cal-wday{text-align:center;font-size:10px;color:var(--brown3);padding:3px 0;font-weight:600;letter-spacing:.04em;}
+.cal-wday.sun{color:var(--red);}.cal-wday.sat{color:#7a9ab8;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 20px 16px;}
+.cal-day{
+  border-radius:8px;min-height:52px;padding:5px 3px 4px;
+  display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;border:1px solid var(--border);background:var(--bg2);
+  transition:all .15s;position:relative;overflow:hidden;
+}
+.cal-day.empty{cursor:default;pointer-events:none;background:transparent;border-color:transparent;}
+.cal-day.off{background:#ede8e2;border-color:#e0dad2;}
+.cal-day.past{opacity:.3;pointer-events:none;}
+.cal-day.selected{background:var(--brown);border-color:var(--brown);}
+.cal-day.selected .cdn{color:#fff !important;}
+.cal-day.today .cdn{
+  background:var(--brown2);color:#fff !important;border-radius:50%;
+  width:20px;height:20px;display:flex;align-items:center;justify-content:center;line-height:1;
+}
+.cdn{font-size:12px;font-weight:600;color:var(--brown);text-align:center;line-height:20px;min-width:20px;}
+.cal-day.off .cdn{color:var(--brown3);}
+.sun-c .cdn{color:var(--red) !important;}
+.cal-day.off.sun-c .cdn{color:#ddb8b0 !important;}
+.cds{display:flex;flex-direction:column;gap:1px;margin-top:2px;width:100%;}
+.cd{font-size:8px;text-align:center;color:var(--brown2);line-height:1.3;}
+.cd.bk{color:var(--red);text-decoration:line-through;}
+.full-lbl{font-size:8px;font-weight:700;color:var(--red);text-align:center;margin-top:1px;}
+
+/* slot picker */
+.slot-picker{padding:0 20px 16px;}
+.slot-picker-title{font-size:12px;color:var(--brown3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;font-weight:500;}
+.slot-options{display:flex;flex-direction:column;gap:8px;}
+.slot-opt{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-radius:10px;border:1px solid var(--border);
+  background:var(--card);cursor:pointer;transition:all .15s;
+}
+.slot-opt:active{background:#f5ede4;}
+.slot-opt.selected{border-color:var(--brown2);background:#faf5ef;}
+.slot-opt.booked{opacity:.45;pointer-events:none;text-decoration:line-through;}
+.slot-time{font-size:14px;font-weight:500;color:var(--brown);}
+.slot-badge{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--bg2);color:var(--brown3);}
+.slot-opt.selected .slot-badge{background:var(--brown2);color:#fff;}
+.slot-opt.booked .slot-badge{background:#fdf0ee;color:var(--red);}
+
+.selected-summary{
+  margin:0 20px 16px;padding:12px 16px;
+  background:#faf5ef;border:1px solid #e8d4c0;border-radius:10px;
+}
+.sum-label{font-size:11px;color:var(--brown3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+.sum-value{font-size:15px;font-weight:500;color:var(--brown);}
+
+/* ── Review page ── */
+.review-card{
+  margin:20px;background:var(--card);border-radius:14px;
+  border:1px solid var(--border);overflow:hidden;
+}
+.review-row{display:flex;padding:12px 16px;border-bottom:1px solid var(--bg);}
+.review-row:last-child{border-bottom:none;}
+.rr-label{font-size:12px;color:var(--brown3);width:80px;flex-shrink:0;padding-top:1px;}
+.rr-value{font-size:14px;color:var(--brown);font-weight:500;flex:1;line-height:1.5;}
+.review-photo{padding:12px 16px;border-top:1px solid var(--bg);}
+.review-photo img{width:100%;border-radius:8px;max-height:140px;object-fit:cover;}
+
+/* ── Bottom nav ── */
+.bottom-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--card);border-top:1px solid var(--border);
+  padding:12px 20px calc(12px + env(safe-area-inset-bottom));
+  display:flex;gap:10px;z-index:10;
+}
+.btn-back{
+  padding:13px 20px;background:var(--bg2);color:var(--brown);
+  border:1px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;
+  cursor:pointer;font-family:var(--font);flex-shrink:0;
+}
+.btn-next{
+  flex:1;padding:13px;background:var(--brown);color:#fff;
+  border:none;border-radius:10px;font-size:15px;font-weight:500;
+  cursor:pointer;font-family:var(--font);transition:background .2s;
+}
+.btn-next:hover{background:#5a4838;}
+.btn-next:disabled{background:var(--brown3);cursor:not-allowed;}
+.btn-submit{
+  flex:1;padding:13px;background:var(--brown2);color:#fff;
+  border:none;border-radius:10px;font-size:15px;font-weight:500;
+  cursor:pointer;font-family:var(--font);transition:background .2s;
+}
+.btn-submit:hover{background:#5a3e28;}
+.btn-submit:disabled{background:var(--brown3);cursor:not-allowed;}
+
+/* spacer for fixed bottom bar */
+.bottom-spacer{height:80px;}
+
+/* ── Success page ── */
+.success-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;padding:40px 24px;text-align:center;}
+.success-icon{font-size:56px;margin-bottom:16px;}
+.success-title{font-family:'Dancing Script',cursive;font-size:32px;color:var(--brown2);margin-bottom:8px;}
+.success-msg{font-size:14px;color:var(--brown3);line-height:1.7;}
+.success-detail{margin:20px 0;background:var(--bg2);border-radius:12px;padding:16px 20px;width:100%;text-align:left;}
+.sd-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.sd-row:last-child{border-bottom:none;}
+.sd-lbl{color:var(--brown3);}
+.sd-val{font-weight:500;color:var(--brown);}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ PAGE 1: 基本資料 ══════════════ -->
+<div class="page active" id="page1">
+  <div class="top-bar">
+    <div class="brand">YQN Studio</div>
+    <div class="page-title">線上預約系統</div>
+    <div class="steps" style="margin-top:12px;">
+      <div class="step active" id="s1">1</div>
+      <div class="step-line" id="sl1"></div>
+      <div class="step pending" id="s2">2</div>
+      <div class="step-line" id="sl2"></div>
+      <div class="step pending" id="s3">3</div>
+      <div class="step-line" id="sl3"></div>
+      <div class="step pending" id="s4">4</div>
+    </div>
+  </div>
+  <div class="form-body">
+    <div class="section-label">基本資料</div>
+
+    <div class="field">
+      <label>姓名<span class="req">*</span></label>
+      <input type="text" id="f_name" placeholder="請輸入真實姓名" autocomplete="name"/>
+    </div>
+
+    <div class="field">
+      <label>性別<span class="req">*</span></label>
+      <div class="radio-group">
+        <div class="radio-item">
+          <input type="radio" name="gender" id="g_f" value="女"/>
+          <label for="g_f">👩 女</label>
+        </div>
+        <div class="radio-item">
+          <input type="radio" name="gender" id="g_m" value="男"/>
+          <label for="g_m">👨 男</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>生日<span class="req">*</span></label>
+      <input type="date" id="f_bday" max="2010-12-31"/>
+    </div>
+
+    <div class="field">
+      <label>手機號碼<span class="req">*</span></label>
+      <input type="tel" id="f_phone" placeholder="09xxxxxxxx" maxlength="10"/>
+    </div>
+
+    <div class="bottom-spacer"></div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-next" onclick="goStep2()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE 2: 預約項目 ══════════════ -->
+<div class="page" id="page2">
+  <div class="top-bar">
+    <div class="brand">YQN Studio</div>
+    <div class="page-title">線上預約系統</div>
+    <div class="steps" style="margin-top:12px;">
+      <div class="step done" id="s1b">✓</div>
+      <div class="step-line done"></div>
+      <div class="step active">2</div>
+      <div class="step-line" id="sl2b"></div>
+      <div class="step pending">3</div>
+      <div class="step-line"></div>
+      <div class="step pending">4</div>
+    </div>
+  </div>
+  <div class="form-body">
+    <div class="section-label">預約項目</div>
+
+    <div class="field">
+      <label>服務項目<span class="req">*</span></label>
+      <div class="service-cards">
+        <div class="service-card" id="sc_wuhu" onclick="selectService('霧眉','sc_wuhu')">
+          <input type="radio" name="service" value="霧眉"/>
+          <div class="sc-name">✨ 霧眉</div>
+          <div class="sc-desc">時長約 2 – 3 小時</div>
+          <div class="sc-check"></div>
+        </div>
+        <div class="service-card" id="sc_touch" onclick="selectService('補色','sc_touch')">
+          <input type="radio" name="service" value="補色"/>
+          <div class="sc-name">🎨 補色</div>
+          <div class="sc-desc">時長約 1 – 2 小時</div>
+          <div class="sc-check"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:20px;">
+      <label>是否曾經做過霧眉？<span class="req">*</span></label>
+      <div class="yn-group">
+        <div class="yn-item">
+          <input type="radio" name="hasbrow" id="hb_y" value="是"/>
+          <label for="hb_y">✅ 是</label>
+        </div>
+        <div class="yn-item">
+          <input type="radio" name="hasbrow" id="hb_n" value="否"/>
+          <label for="hb_n">❌ 否（首次）</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-spacer"></div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-back" onclick="showPage(1)">← 返回</button>
+    <button class="btn-next" onclick="goStep3()">下一步 →</button>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE 3: 選擇日期時段 ══════════════ -->
+<div class="page" id="page3">
+  <div class="top-bar">
+    <div class="brand">YQN Studio</div>
+    <div class="page-title">線上預約系統</div>
+    <div class="steps" style="margin-top:12px;">
+      <div class="step done">✓</div>
+      <div class="step-line done"></div>
+      <div class="step done">✓</div>
+      <div class="step-line done"></div>
+      <div class="step active">3</div>
+      <div class="step-line"></div>
+      <div class="step pending">4</div>
+    </div>
+  </div>
+  <div class="cal-header">
+    <div class="section-label" style="margin-bottom:8px;">選擇預約日期</div>
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calChangeMonth(-1)">‹ 上月</button>
+      <span class="cal-month" id="calMonthLabel"></span>
+      <button class="cal-nav-btn" onclick="calChangeMonth(1)">下月 ›</button>
+    </div>
+  </div>
+  <div class="cal-grid-head">
+    <div class="cal-wday sun">SUN</div><div class="cal-wday">MON</div><div class="cal-wday">TUE</div>
+    <div class="cal-wday">WED</div><div class="cal-wday">THU</div><div class="cal-wday">FRI</div>
+    <div class="cal-wday sat">SAT</div>
+  </div>
+  <div class="cal-grid" id="calGrid"></div>
+
+  <div class="slot-picker" id="slotPicker" style="display:none;">
+    <div class="slot-picker-title">選擇時段</div>
+    <div class="slot-options" id="slotOptions"></div>
+  </div>
+
+  <div class="selected-summary" id="selectedSummary" style="display:none;">
+    <div class="sum-label">已選擇</div>
+    <div class="sum-value" id="sumValue">—</div>
+  </div>
+
+  <div class="bottom-spacer"></div>
+  <div class="bottom-bar">
+    <button class="btn-back" onclick="showPage(2)">← 返回</button>
+    <button class="btn-next" id="btnStep4" onclick="goStep4()" disabled>下一步 →</button>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE 4: 上傳照片 ══════════════ -->
+<div class="page" id="page4">
+  <div class="top-bar">
+    <div class="brand">YQN Studio</div>
+    <div class="page-title">線上預約系統</div>
+    <div class="steps" style="margin-top:12px;">
+      <div class="step done">✓</div>
+      <div class="step-line done"></div>
+      <div class="step done">✓</div>
+      <div class="step-line done"></div>
+      <div class="step done">✓</div>
+      <div class="step-line done"></div>
+      <div class="step active">4</div>
+    </div>
+  </div>
+  <div class="form-body">
+    <div class="section-label">上傳眉毛照片</div>
+
+    <div class="notice">
+      <p>📸 預約前請務必上傳<strong>「無濾鏡素顏眉毛照片」</strong><br/>
+      確保師傅能準確評估您的眉型狀況</p>
+    </div>
+
+    <div class="field">
+      <label>眉毛素顏照<span class="req">*</span></label>
+      <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text">點擊上傳照片</div>
+        <div class="upload-hint">請上傳無濾鏡素顏眉毛正面照</div>
+        <input type="file" id="f_photo" accept="image/*" capture="environment" onchange="handlePhoto(this)"/>
+        <img id="photoPreview"/>
+      </div>
+    </div>
+
+    <div class="bottom-spacer"></div>
+  </div>
+  <div class="bottom-bar">
+    <button class="btn-back" onclick="showPage(3)">← 返回</button>
+    <button class="btn-next" onclick="goReview()">確認預約資料 →</button>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE 5: 確認送出 ══════════════ -->
+<div class="page" id="page5">
+  <div class="top-bar">
+    <div class="brand">YQN Studio</div>
+    <div class="page-title">確認預約資料</div>
+  </div>
+  <div class="review-card">
+    <div class="review-row"><div class="rr-label">姓名</div><div class="rr-value" id="rv_name">—</div></div>
+    <div class="review-row"><div class="rr-label">性別</div><div class="rr-value" id="rv_gender">—</div></div>
+    <div class="review-row"><div class="rr-label">生日</div><div class="rr-value" id="rv_bday">—</div></div>
+    <div class="review-row"><div class="rr-label">手機</div><div class="rr-value" id="rv_phone">—</div></div>
+    <div class="review-row"><div class="rr-label">服務</div><div class="rr-value" id="rv_service">—</div></div>
+    <div class="review-row"><div class="rr-label">預約時間</div><div class="rr-value" id="rv_booking">—</div></div>
+    <div class="review-row"><div class="rr-label">曾做霧眉</div><div class="rr-value" id="rv_hasbrow">—</div></div>
+    <div class="review-photo">
+      <div class="rr-label" style="margin-bottom:8px;">眉毛照片</div>
+      <img id="rv_photo" style="width:100%;border-radius:8px;max-height:160px;object-fit:cover;"/>
+    </div>
+  </div>
+  <div style="padding:12px 20px;font-size:12px;color:var(--brown3);line-height:1.7;text-align:center;">
+    送出後無法修改，請確認資料無誤
+  </div>
+  <div class="bottom-spacer"></div>
+  <div class="bottom-bar">
+    <button class="btn-back" onclick="showPage(4)">← 返回</button>
+    <button class="btn-submit" id="btnSubmit" onclick="submitBooking()">確認送出預約</button>
+  </div>
+</div>
+
+<!-- ══════════════ PAGE 6: 成功 ══════════════ -->
+<div class="page" id="page6">
+  <div class="success-wrap">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">預約成功！</div>
+    <div class="success-msg">感謝您的預約<br/>我們會盡快與您確認</div>
+    <div class="success-detail" id="successDetail"></div>
+    <div style="font-size:12px;color:var(--brown3);margin-top:8px;">此視窗將於 3 秒後自動關閉</div>
+  </div>
+</div>
+
+<script>
+// ══════════════ CONFIG ══════════════
+const LIFF_ID       = '2009889898-kxdrRvXF'; // ← 填入你的 LIFF ID
+const WEBHOOK_URL   = 'https://hook.us2.make.com/2t6ijtym92vgl86xuxq4xenzdumpeezh'; // ← 填入你的 Make Webhook
+
+const MONTHS_ZH = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const SLOT_LABELS = {
+  '10:00':'10:00 – 12:00',
+  '14:00':'14:00 – 16:00',
+  '18:00':'18:00 – 20:00'
+};
+const DEFAULT_SLOTS = ['10:00','14:00','18:00'];
+
+// ══════════════ STATE ══════════════
+const now = new Date();
+let calYear  = now.getFullYear();
+let calMonth = now.getMonth();
+let selectedDate = null; // 'YYYY-M-D'
+let selectedSlot = null; // '10:00' etc
+let photoDataUrl  = null;
+let lineUserId    = null;
+
+// Schedule data (shared with owner tool via localStorage)
+let scheduleData = {};
+try{ const s=localStorage.getItem('yqn_v6'); if(s) scheduleData=JSON.parse(s); }catch(e){}
+
+let formData = {};
+
+// ══════════════ LIFF INIT ══════════════
+async function initLiff(){
+  try{
+    await liff.init({ liffId: LIFF_ID });
+    if(liff.isLoggedIn()){
+      const profile = await liff.getProfile();
+      lineUserId = profile.userId;
+    }
+  }catch(e){
+    console.warn('LIFF init failed (running outside LINE):', e);
+  }
+}
+initLiff();
+
+// ══════════════ PAGE NAV ══════════════
+function showPage(n){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page'+n).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ══════════════ STEP 1 → 2 ══════════════
+function goStep2(){
+  const name   = document.getElementById('f_name').value.trim();
+  const gender = document.querySelector('input[name=gender]:checked')?.value;
+  const bday   = document.getElementById('f_bday').value;
+  const phone  = document.getElementById('f_phone').value.trim();
+
+  if(!name){ alert('請填寫姓名'); return; }
+  if(!gender){ alert('請選擇性別'); return; }
+  if(!bday){ alert('請填寫生日'); return; }
+  if(!/^09\d{8}$/.test(phone)){ alert('請輸入正確的手機號碼（09 開頭，共 10 碼）'); return; }
+
+  formData.name   = name;
+  formData.gender = gender;
+  formData.bday   = bday;
+  formData.phone  = phone;
+  showPage(2);
+}
+
+// ══════════════ SERVICE SELECT ══════════════
+function selectService(val, cardId){
+  document.querySelectorAll('.service-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById(cardId).classList.add('selected');
+  formData.service = val;
+}
+
+// ══════════════ STEP 2 → 3 ══════════════
+function goStep3(){
+  if(!formData.service){ alert('請選擇服務項目'); return; }
+  const hasbrow = document.querySelector('input[name=hasbrow]:checked')?.value;
+  if(!hasbrow){ alert('請選擇是否曾做過霧眉'); return; }
+  formData.hasbrow = hasbrow;
+  renderCal();
+  showPage(3);
+}
+
+// ══════════════ CALENDAR ══════════════
+function renderCal(){
+  document.getElementById('calMonthLabel').textContent = `${calYear} 年 ${MONTHS_ZH[calMonth]}`;
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const first  = new Date(calYear,calMonth,1).getDay();
+  const total  = new Date(calYear,calMonth+1,0).getDate();
+  const todayMs= new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+
+  for(let i=0;i<first;i++){
+    const e=document.createElement('div'); e.className='cal-day empty'; grid.appendChild(e);
+  }
+
+  for(let d=1;d<=total;d++){
+    const dow   = new Date(calYear,calMonth,d).getDay();
+    const key   = `${calYear}-${calMonth}-${d}`;
+    const dData = scheduleData[key];
+    const isOff = dData?.off||false;
+    const slots = dData?.slots||(isOff?[]:DEFAULT_SLOTS.map(t=>({time:t,booked:false})));
+    const allBooked = !isOff&&slots.length>0&&slots.every(s=>s.booked);
+    const dayMs = new Date(calYear,calMonth,d).getTime();
+    const isPast= dayMs < todayMs;
+    const isSel = key===selectedDate;
+
+    const el=document.createElement('div');
+    let cls='cal-day'+(isOff||allBooked?' off':'')+(isPast?' past':'')+(isSel?' selected':'')+(dow===0?' sun-c':'');
+    if(dayMs===todayMs) cls+=' today';
+    el.className=cls;
+
+    let html=`<span class="cdn">${d}</span>`;
+    if(!isOff&&!isPast){
+      if(allBooked){
+        html+=`<div class="full-lbl">額滿</div>`;
+      } else {
+        html+='<div class="cds">';
+        slots.forEach(s=>{
+          html+=`<div class="cd${s.booked?' bk':''}">${s.time}</div>`;
+        });
+        html+='</div>';
+      }
+    }
+    el.innerHTML=html;
+
+    if(!isOff&&!isPast&&!allBooked){
+      el.onclick=()=>selectCalDay(d,dow,key,slots);
+    }
+    grid.appendChild(el);
+  }
+}
+
+function calChangeMonth(d){
+  calMonth+=d;
+  if(calMonth>11){calMonth=0;calYear++;}
+  if(calMonth<0){calMonth=11;calYear--;}
+  selectedDate=null; selectedSlot=null;
+  document.getElementById('slotPicker').style.display='none';
+  document.getElementById('selectedSummary').style.display='none';
+  document.getElementById('btnStep4').disabled=true;
+  renderCal();
+}
+
+function selectCalDay(d,dow,key,slots){
+  selectedDate=key; selectedSlot=null;
+  renderCal();
+
+  const WD=['日','一','二','三','四','五','六'];
+  const picker=document.getElementById('slotPicker');
+  const opts=document.getElementById('slotOptions');
+  opts.innerHTML='';
+
+  // only show available (non-booked) slots
+  const avail = slots.filter(s=>!s.booked);
+  avail.forEach(s=>{
+    const div=document.createElement('div');
+    div.className='slot-opt';
+    div.innerHTML=`<span class="slot-time">${SLOT_LABELS[s.time]||s.time}</span><span class="slot-badge">可預約</span>`;
+    div.onclick=()=>selectSlot(s.time, `${calYear}/${calMonth+1}/${d}（${WD[dow]}）`, div);
+    opts.appendChild(div);
+  });
+
+  picker.style.display='block';
+  document.getElementById('selectedSummary').style.display='none';
+  document.getElementById('btnStep4').disabled=true;
+  picker.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function selectSlot(time, dateLabel, el){
+  selectedSlot=time;
+  document.querySelectorAll('.slot-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+
+  const label=`${dateLabel}　${SLOT_LABELS[time]||time}`;
+  formData.bookingDate=dateLabel;
+  formData.bookingSlot=SLOT_LABELS[time]||time;
+  formData.bookingLabel=label;
+
+  document.getElementById('sumValue').textContent=label;
+  document.getElementById('selectedSummary').style.display='block';
+  document.getElementById('btnStep4').disabled=false;
+}
+
+// ══════════════ STEP 3 → 4 ══════════════
+function goStep4(){
+  if(!selectedDate||!selectedSlot){ alert('請選擇預約日期與時段'); return; }
+  showPage(4);
+}
+
+// ══════════════ PHOTO ══════════════
+function handlePhoto(input){
+  const file=input.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    photoDataUrl=e.target.result;
+    const preview=document.getElementById('photoPreview');
+    preview.src=photoDataUrl;
+    preview.style.display='block';
+    document.getElementById('uploadArea').classList.add('has-file');
+    document.querySelector('.upload-text').textContent='照片已上傳 ✓';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══════════════ STEP 4 → REVIEW ══════════════
+function goReview(){
+  if(!photoDataUrl){ alert('請上傳眉毛素顏照片'); return; }
+  document.getElementById('rv_name').textContent    = formData.name;
+  document.getElementById('rv_gender').textContent  = formData.gender;
+  document.getElementById('rv_bday').textContent    = formData.bday;
+  document.getElementById('rv_phone').textContent   = formData.phone;
+  document.getElementById('rv_service').textContent = formData.service;
+  document.getElementById('rv_booking').textContent = formData.bookingLabel;
+  document.getElementById('rv_hasbrow').textContent = formData.hasbrow;
+  document.getElementById('rv_photo').src           = photoDataUrl;
+  showPage(5);
+}
+
+// ══════════════ SUBMIT ══════════════
+async function submitBooking(){
+  const btn=document.getElementById('btnSubmit');
+  btn.disabled=true; btn.textContent='送出中...';
+
+  const payload={
+    lineUserId: lineUserId||'未登入',
+    name:       formData.name,
+    gender:     formData.gender,
+    birthday:   formData.bday,
+    phone:      formData.phone,
+    service:    formData.service,
+    hasBrowBefore: formData.hasbrow,
+    bookingDate:   formData.bookingDate,
+    bookingSlot:   formData.bookingSlot,
+    bookingLabel:  formData.bookingLabel,
+    photo:         photoDataUrl,
+    timestamp:     new Date().toISOString()
+  };
+
+  try{
+    const res=await fetch(WEBHOOK_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error('server error');
+
+    // success
+    document.getElementById('successDetail').innerHTML=`
+      <div class="sd-row"><span class="sd-lbl">姓名</span><span class="sd-val">${formData.name}</span></div>
+      <div class="sd-row"><span class="sd-lbl">服務</span><span class="sd-val">${formData.service}</span></div>
+      <div class="sd-row"><span class="sd-lbl">預約時間</span><span class="sd-val">${formData.bookingLabel}</span></div>
+    `;
+    showPage(6);
+    setTimeout(()=>{ try{ liff.closeWindow(); }catch(e){} }, 3000);
+
+  }catch(err){
+    alert('送出失敗，請稍後再試');
+    btn.disabled=false; btn.textContent='確認送出預約';
+  }
+}
+</script>
+</body>
+</html>
